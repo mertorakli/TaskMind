@@ -275,6 +275,20 @@ p {
 .nav-logo {
   font-family: var(--font-display);
   font-weight: var(--font-weight-bold);
+  display: flex;
+  align-items: center;
+}
+
+.nav-logo a {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.nav-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
 .logo-text {

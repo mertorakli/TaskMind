@@ -275,21 +275,42 @@ export function AuthProvider({ children }) {
         throw new Error('No authenticated user found');
       }
       
-      // Re-authenticate user before deletion
+      // Store user email for reauth
+      const userEmail = currentUser.email;
+      
+      // First delete the user's Firestore document
+      try {
+        await deleteDoc(doc(db, 'users', currentUser.uid));
+        console.log("User document deleted successfully");
+      } catch (firestoreError) {
+        console.error("Error deleting user document:", firestoreError);
+        // Continue with auth deletion even if document deletion fails
+      }
+      
+      // Re-authenticate user before auth deletion
       const credential = EmailAuthProvider.credential(
-        currentUser.email,
+        userEmail,
         password
       );
       
-      await reauthenticateWithCredential(currentUser, credential);
-      
-      // Delete user document from Firestore
-      await deleteDoc(doc(db, 'users', currentUser.uid));
-      
-      // Delete user from Firebase Authentication
-      await deleteUser(currentUser);
-      
-      return true;
+      try {
+        // Reauthenticate first
+        await reauthenticateWithCredential(auth.currentUser, credential);
+        console.log("User reauthenticated successfully");
+        
+        // Now delete the user directly
+        await deleteUser(auth.currentUser);
+        console.log("User auth record deleted successfully");
+        
+        // Force sign out
+        await signOut(auth);
+        console.log("User signed out after deletion");
+        
+        return true;
+      } catch (authError) {
+        console.error("Authentication error during account deletion:", authError);
+        throw authError;
+      }
     } catch (error) {
       console.error("Delete account error:", error);
       setError(error.message);

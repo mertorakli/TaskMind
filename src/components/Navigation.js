@@ -27,6 +27,11 @@ export default function Navigation() {
         <div className="nav-content">
           <div className="nav-logo">
             <Link to="/">
+              <img 
+                src="/assets/TaskMind_Icon.png" 
+                alt="TaskMind Logo" 
+                className="nav-icon" 
+              />
               <span className="logo-text">TaskMind</span>
             </Link>
           </div>

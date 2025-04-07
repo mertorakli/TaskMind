@@ -145,11 +145,26 @@ export default function Profile() {
 
     setLoading(true);
     try {
+      // Since the deleteUserAccount function will sign the user out as part of the process,
+      // we don't need to call logout() again here
       await deleteUserAccount(deletePassword);
-      await logout();
-      navigate('/');
+      
+      // Just navigate to the home page
+      navigate('/', { replace: true });
     } catch (error) {
-      setError('Failed to delete account: ' + error.message);
+      // Provide more specific error message
+      console.error('Account deletion error:', error);
+      
+      if (error.code === 'auth/wrong-password') {
+        setError('Failed to delete account: The password you entered is incorrect');
+      } else if (error.code === 'auth/requires-recent-login') {
+        setError('For security reasons, please log out and log in again before deleting your account');
+      } else if (error.code === 'auth/too-many-requests') {
+        setError('Too many failed attempts. Please try again later');
+      } else {
+        setError('Failed to delete account: ' + error.message);
+      }
+    } finally {
       setLoading(false);
     }
   };
