@@ -4,15 +4,15 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getAnalytics } from 'firebase/analytics';
 
-// Firebase configuration
+// Firebase configuration using environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyA0NKHkGQXgGH0OHlF1o4uYP82rf_6Pg7g",
-  authDomain: "taskmind-1463f.firebaseapp.com",
-  projectId: "taskmind-1463f",
-  storageBucket: "taskmind-1463f.firebasestorage.app",
-  messagingSenderId: "340435678875",
-  appId: "1:340435678875:web:a597de38d9974a7a40383e",
-  measurementId: "G-REBZQGLFRQ"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
