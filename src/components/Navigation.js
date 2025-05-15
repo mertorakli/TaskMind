@@ -42,6 +42,9 @@ export default function Navigation() {
                 <Link to="/dashboard" className={isActive('/dashboard') ? 'active' : ''}>
                   Dashboard
                 </Link>
+                <Link to="/calendar" className={isActive('/calendar') ? 'active' : ''}>
+                  Calendar
+                </Link>
                 <Link to="/profile" className={isActive('/profile') ? 'active' : ''}>
                   Profile
                 </Link>

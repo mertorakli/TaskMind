@@ -5,6 +5,8 @@ import {
   signOut, 
   onAuthStateChanged,
   sendPasswordResetEmail,
+  verifyPasswordResetCode,
+  confirmPasswordReset as firebaseConfirmPasswordReset,
   deleteUser,
   EmailAuthProvider,
   reauthenticateWithCredential,
@@ -126,7 +128,8 @@ export function AuthProvider({ children }) {
       // Check if user has admin role
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       if (userDoc.exists() && userDoc.data().role === 'system_admin') {
-        return user;
+        // Return the user with role already set to avoid auth state change issues
+        return { ...user, role: 'system_admin' };
       } else {
         await signOut(auth);
         throw new Error('Not authorized as admin');
@@ -166,6 +169,50 @@ export function AuthProvider({ children }) {
     return signOut(auth);
   }
 
+  // Password reset function
+  async function sendPasswordReset(email) {
+    try {
+      setError('');
+      console.log(`[AUTH] Sending password reset email to ${email}`);
+
+      const actionCodeSettings = {
+        // URL must be exact match with the authorized domain in Firebase Console
+        // Firebase will append oobCode and other parameters to this URL
+        url: `${window.location.origin}/reset-password`,
+        // Use our custom reset page instead of Firebase's default
+        handleCodeInApp: true
+      };
+      
+      await sendPasswordResetEmail(auth, email, actionCodeSettings);
+      console.log(`[AUTH] Password reset email sent to ${email}`);
+      return true;
+    } catch (error) {
+      console.error(`[AUTH] Password reset error for ${email}:`, error);
+      setError(error.message);
+      throw error;
+    }
+  }
+
+  // Password reset confirmation function
+  async function resetPassword(actionCode, newPassword) {
+    try {
+      setError('');
+      console.log('[AUTH] Verifying password reset code');
+      
+      // First verify the action code
+      await verifyPasswordResetCode(auth, actionCode);
+      
+      // Then confirm the password reset
+      await firebaseConfirmPasswordReset(auth, actionCode, newPassword);
+      console.log('[AUTH] Password has been reset successfully');
+      return true;
+    } catch (error) {
+      console.error('[AUTH] Error confirming password reset:', error);
+      setError(error.message);
+      throw error;
+    }
+  }
+
   // Get user role
   async function getUserRole(uid) {
     const userDoc = await getDoc(doc(db, 'users', uid));
@@ -203,6 +250,7 @@ export function AuthProvider({ children }) {
             createdAt: new Date().toISOString()
           });
         }
+        // Don't update existing documents here to preserve admin status
       }
     } catch (error) {
       console.error("Error creating/updating user document:", error);
@@ -318,14 +366,49 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // Update user role (admin function)
+  async function updateUserRole(userId, newRole) {
+    try {
+      setError('');
+      
+      // Update user document in Firestore
+      const userDocRef = doc(db, 'users', userId);
+      await updateDoc(userDocRef, {
+        role: newRole,
+        updatedAt: new Date().toISOString()
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Update role error:", error);
+      setError(error.message);
+      throw error;
+    }
+  }
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Create or update user document whenever they sign in
-        await createOrUpdateUserDoc(user);
-        
-        const role = await getUserRole(user.uid);
-        setCurrentUser({ ...user, role });
+        try {
+          // First check if user already exists in Firestore
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          
+          if (userDocSnap.exists()) {
+            // User already exists, just get their role
+            const userData = userDocSnap.data();
+            setCurrentUser({ ...user, role: userData.role });
+          } else {
+            // New user, create document
+            await createOrUpdateUserDoc(user);
+            const role = await getUserRole(user.uid);
+            setCurrentUser({ ...user, role });
+          }
+        } catch (error) {
+          console.error("Error in auth state change:", error);
+          // Still set the user even if there was an error
+          setCurrentUser(user);
+        }
       } else {
         setCurrentUser(null);
       }
@@ -345,10 +428,12 @@ export function AuthProvider({ children }) {
     error,
     setError,
     loading,
-    sendPasswordResetEmail,
+    sendPasswordReset,
+    resetPassword,
     updateUserProfile,
     updateUserPassword,
-    deleteUserAccount
+    deleteUserAccount,
+    updateUserRole
   };
 
   return (
